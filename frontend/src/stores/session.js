@@ -16,10 +16,14 @@ function apply(data) {
   selectTeam(state.teams.some(t => t.id === state.activeId) ? state.activeId : state.teams.some(t => t.id === stored) ? stored : state.teams[0]?.id)
 }
 function selectTeam(id) {
-  state.activeId = id || null
+  const targetId = id || null
+  const changed = state.activeId !== targetId
+  state.activeId = targetId
   localStorage.setItem('teamflow.activeTeam', String(state.activeId || ''))
-  state.team = null
-  state.members = []
+  if (changed) {
+    state.team = null
+    state.members = []
+  }
   requestVersion++
 }
 async function getSupaSession() {
@@ -74,7 +78,7 @@ async function restore() {
     state.ready = true
   }
 }
-function init() { return initialization ||= restore() }
+function init() { if (state.ready) return Promise.resolve(); return initialization ||= restore() }
 async function refresh() { apply((await api.get('/auth/me')).data) }
 function clear() { initialization = null; state.user = null; state.teams = []; selectTeam(null) }
 async function logout() { await api.post('/auth/logout'); clear() }
