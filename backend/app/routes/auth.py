@@ -64,7 +64,9 @@ def supabase_login():
         db.session.add(user)
         db.session.commit()
 
+    csrf_token = session.get('csrf') or secrets.token_hex(32)
     session.clear()
+    session['csrf'] = csrf_token
     login_user(user, remember=True)
     return identity()
 

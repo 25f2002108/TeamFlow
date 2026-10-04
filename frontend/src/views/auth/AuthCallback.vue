@@ -16,10 +16,26 @@ onMounted(async () => {
       return
     }
 
-    const { data: { session: supaSession }, error: sessionError } = await supabase.auth.getSession()
-    
-    if (sessionError || !supaSession?.user) {
-      errorMessage.value = sessionError?.message || 'Failed to retrieve Google login session.'
+    let supaSession = (await supabase.auth.getSession()).data?.session
+
+    if (!supaSession?.user) {
+      await new Promise(resolve => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
+          if (s?.user) {
+            supaSession = s
+            subscription.unsubscribe()
+            resolve()
+          }
+        })
+        setTimeout(() => {
+          subscription.unsubscribe()
+          resolve()
+        }, 2500)
+      })
+    }
+
+    if (!supaSession?.user) {
+      errorMessage.value = 'Failed to retrieve Google login session.'
       return
     }
 
@@ -28,12 +44,13 @@ onMounted(async () => {
     const name = supaUser.user_metadata?.full_name || supaUser.user_metadata?.name || email.split('@')[0]
 
     statusMessage.value = 'Connecting to TeamFlow...'
-    
+
     const { data } = await api.post('/auth/supabase-login', { email, name })
     session.apply(data)
-    
-    await router.push(data.teams.length ? '/' : '/onboarding')
+
+    await router.replace(data.teams && data.teams.length ? '/' : '/onboarding')
   } catch (err) {
+    console.error('OAuth Callback error:', err)
     errorMessage.value = err?.friendly || err?.message || 'Google sign-in failed. Please try again.'
   }
 })

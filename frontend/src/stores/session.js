@@ -8,6 +8,8 @@ const activeTeam = computed(() => state.teams.find(t => t.id === state.activeId)
 function apply(data) {
   state.user = data.user
   state.teams = data.teams
+  state.ready = true
+  state.error = ''
   let stored = Number(localStorage.getItem('teamflow.activeTeam'))
   selectTeam(state.teams.some(t => t.id === state.activeId) ? state.activeId : state.teams.some(t => t.id === stored) ? stored : state.teams[0]?.id)
 }
