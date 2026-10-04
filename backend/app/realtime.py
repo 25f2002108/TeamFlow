@@ -49,11 +49,14 @@ def reconcile():
                 socketio.server.leave_room(sid,f'file:{nid}',namespace='/'); peer.update(node_id=None,cursor=None,state='viewing')
             elif permission == 'VIEW': peer['state']='viewing'
 
+from . import is_allowed_origin
+
 @socketio.on('connect')
 def connect(auth):
     token=session.get('csrf')
     if not current_user.is_authenticated or not isinstance(auth,dict) or not isinstance(auth.get('csrf'),str) or not token or not secrets.compare_digest(token,auth['csrf']): return False
-    if request.headers.get('Origin') and request.headers['Origin'] != current_app.config['FRONTEND_ORIGIN']: return False
+    origin = request.headers.get('Origin')
+    if origin and not is_allowed_origin(origin, current_app.config.get('FRONTEND_ORIGIN', ''), request.host_url): return False
     connections()[request.sid]=dict(uid=current_user.id,csrf=token,team_id=None,project_id=None,node_id=None,state='viewing',cursor=None,last=0)
     join_room(f'user:{current_user.id}')
 

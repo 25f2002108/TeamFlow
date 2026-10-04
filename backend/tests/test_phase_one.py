@@ -95,6 +95,8 @@ def test_csrf_and_invalid_json(client):
     assert client.post('/api/auth/register', json={}).status_code == 403
     token = client.get('/api/auth/csrf').json['csrf_token']
     assert client.post('/api/auth/login', json={}, headers={'X-CSRF-Token': token, 'Origin': 'https://evil.example'}).status_code == 403
+    assert client.post('/api/auth/login', json={}, headers={'X-CSRF-Token': token, 'Origin': 'http://127.0.0.1:5173'}).status_code != 403
+    assert client.post('/api/auth/login', json={}, headers={'X-CSRF-Token': token, 'Origin': 'http://localhost:5173'}).status_code != 403
     assert mutate(client, 'post', '/api/auth/register', []).status_code == 400
 
 def test_sqlite_persistence_across_app_restart(tmp_path):

@@ -11,6 +11,44 @@ from dotenv import load_dotenv
 from .extensions import db, login_manager, socketio
 
 
+from urllib.parse import urlparse
+
+
+def is_allowed_origin(origin, frontend_origin_setting, request_host_url=None):
+    if not origin:
+        return True
+
+    origin_clean = origin.rstrip('/')
+
+    if request_host_url and origin_clean == request_host_url.rstrip('/'):
+        return True
+
+    allowed_list = [
+        o.strip().rstrip('/')
+        for o in (frontend_origin_setting or "").split(',')
+        if o.strip()
+    ]
+
+    if "*" in allowed_list or origin_clean in allowed_list:
+        return True
+
+    parsed_origin = urlparse(origin_clean)
+    if parsed_origin.hostname in ("localhost", "127.0.0.1"):
+        for allowed in allowed_list:
+            parsed_allowed = urlparse(allowed)
+            if parsed_allowed.hostname in ("localhost", "127.0.0.1"):
+                if parsed_origin.port == parsed_allowed.port:
+                    return True
+                if parsed_origin.port in (5173, 5174, 5000, 5001) or parsed_origin.port is None:
+                    return True
+
+    if os.getenv("VERCEL") or os.getenv("VERCEL_ENV"):
+        if parsed_origin.hostname and parsed_origin.hostname.endswith(".vercel.app"):
+            return True
+
+    return False
+
+
 def create_app(config=None):
     load_dotenv()
 
@@ -90,7 +128,7 @@ def create_app(config=None):
 
     socketio.init_app(
         app,
-        cors_allowed_origins=[app.config["FRONTEND_ORIGIN"]],
+        cors_allowed_origins="*",
         max_http_buffer_size=1024 * 1024,
     )
 
@@ -130,7 +168,11 @@ def create_app(config=None):
         ):
             origin = request.headers.get("Origin")
 
-            if origin and origin != app.config["FRONTEND_ORIGIN"]:
+            if origin and not is_allowed_origin(
+                origin,
+                app.config.get("FRONTEND_ORIGIN", ""),
+                request.host_url
+            ):
                 abort(
                     403,
                     description="Request origin is not allowed."
