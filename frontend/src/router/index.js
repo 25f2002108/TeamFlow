@@ -24,7 +24,7 @@ router.beforeEach(async to => {
   if (session.state.error) return true
   if (to.meta.protected && !session.state.user) return '/login'
   if (to.meta.team && !session.state.teams.length) return '/onboarding'
-  if (['/login', '/register'].includes(to.path) && session.state.user) return session.state.teams.length ? '/' : '/onboarding'
+  if (['/login', '/register', '/auth/callback'].includes(to.path) && session.state.user) return session.state.teams.length ? '/' : '/onboarding'
 })
 window.addEventListener('session-expired', () => { session.clear(); router.replace('/login') })
 export default router

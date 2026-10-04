@@ -1,5 +1,6 @@
 import { reactive, computed } from 'vue'
 import { api } from '../services/api'
+import { supabase } from '../lib/supabase'
 
 const state = reactive({ user: null, teams: [], activeId: null, ready: false, error: '', team: null, members: [], loading: false })
 let initialization
@@ -22,9 +23,40 @@ function selectTeam(id) {
 }
 async function restore() {
   state.error = ''
-  try { apply((await api.get('/auth/me')).data) }
-  catch (error) { if (error.response?.status === 401) clear(); else state.error = error.friendly }
-  finally { state.ready = true }
+  try {
+    apply((await api.get('/auth/me')).data)
+  } catch (error) {
+    if (error.response?.status === 401) {
+      let synced = false
+      if (supabase) {
+        try {
+          let supaSession = (await supabase.auth.getSession()).data?.session
+          if (!supaSession?.user && (window.location.hash.includes('access_token=') || window.location.hash.includes('type='))) {
+            await new Promise(resolve => {
+              const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
+                if (s?.user) { supaSession = s; subscription.unsubscribe(); resolve() }
+              })
+              setTimeout(() => { subscription.unsubscribe(); resolve() }, 2000)
+            })
+          }
+          if (supaSession?.user) {
+            const email = supaSession.user.email
+            const name = supaSession.user.user_metadata?.full_name || supaSession.user.user_metadata?.name || email.split('@')[0]
+            const { data } = await api.post('/auth/supabase-login', { email, name })
+            apply(data)
+            synced = true
+          }
+        } catch (e) {
+          console.error('Supabase auto-sync failed:', e)
+        }
+      }
+      if (!synced) clear()
+    } else {
+      state.error = error.friendly
+    }
+  } finally {
+    state.ready = true
+  }
 }
 function init() { return initialization ||= restore() }
 async function refresh() { apply((await api.get('/auth/me')).data) }
