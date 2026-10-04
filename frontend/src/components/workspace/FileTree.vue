@@ -1,0 +1,9 @@
+<script setup>
+import { computed } from 'vue'
+import { ChevronRight, ChevronDown, Folder, FolderOpen, FileCode2, FileText, FileJson2, MoreHorizontal, LockKeyhole } from 'lucide-vue-next'
+const props=defineProps({nodes:Array,parentId:{default:null},level:{default:0},activeId:Number,expanded:Object})
+const emit=defineEmits(['open','toggle','menu'])
+const children=computed(()=>props.nodes.filter(n=>n.parent_id===props.parentId))
+const icon=node=>node.name.endsWith('.json')?FileJson2:/\.(md|txt)$/.test(node.name)?FileText:FileCode2
+</script>
+<template><div class="file-tree-level"><div v-for="node in children" :key="node.id"><div :class="['file-tree-row',{active:activeId===node.id}]" :style="{paddingLeft:`${10+level*14}px`}" @contextmenu.prevent="$emit('menu',{event:$event,node})"><button class="file-tree-select" :aria-label="`${node.kind==='folder'?'Toggle folder':'Open file'} ${node.path}`" :aria-expanded="node.kind==='folder'?!!expanded[node.id]:undefined" @click="node.kind==='folder'?$emit('toggle',node):$emit('open',node)"><component v-if="node.kind==='folder'" :is="expanded[node.id]?ChevronDown:ChevronRight" :size="12"/><span v-else class="tree-spacer"></span><component :is="node.kind==='folder'?(expanded[node.id]?FolderOpen:Folder):icon(node)" :size="15"/><span>{{ node.name }}</span><LockKeyhole v-if="node.permission==='VIEW'" :size="11" class="tree-lock"/></button><button class="tree-menu-button" :aria-label="`Actions for ${node.path}`" @click="$emit('menu',{event:$event,node})"><MoreHorizontal :size="14"/></button></div><FileTree v-if="node.kind==='folder' && expanded[node.id]" :nodes="nodes" :parentId="node.id" :level="level+1" :activeId="activeId" :expanded="expanded" @open="$emit('open',$event)" @toggle="$emit('toggle',$event)" @menu="$emit('menu',$event)"/></div></div></template>

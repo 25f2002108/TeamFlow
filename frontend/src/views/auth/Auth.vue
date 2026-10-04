@@ -1,0 +1,20 @@
+<script setup>
+import { computed, reactive, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import InputText from 'primevue/inputtext'
+import Password from 'primevue/password'
+import Checkbox from 'primevue/checkbox'
+import Button from 'primevue/button'
+import { ArrowRight, Users, ShieldCheck, Layers } from 'lucide-vue-next'
+import { api } from '../../services/api'
+import { session } from '../../stores/session'
+const route = useRoute(), router = useRouter(), register = computed(() => route.path === '/register')
+const form = reactive({ name: '', email: '', password: '', confirm_password: '', remember: false }), busy = ref(false), error = ref('')
+async function submit() {
+  if (busy.value) return
+  error.value = ''; busy.value = true
+  try { const { data } = await api.post(register.value ? '/auth/register' : '/auth/login', form); session.apply(data); await router.push(data.teams.length ? '/' : '/onboarding') }
+  catch (e) { error.value = e.friendly } finally { busy.value = false }
+}
+</script>
+<template><div class="auth-layout"><aside class="auth-story"><div class="brand"><span class="brand-mark">T</span> TeamFlow<span class="brand-dot"></span></div><div class="story-main"><span class="eyebrow">A PLACE TO BUILD TOGETHER</span><h1>Great work starts<br>with a great team.</h1><p>A shared home for the people behind your next big idea. Bring your team together and make room for what comes next.</p><div class="story-diagram"><div class="diagram-line"></div><div class="diagram-node"><Users :size="24" /><span>Your people</span></div><div class="diagram-node featured"><Layers :size="24" /><span>One shared space</span></div><div class="diagram-node"><ShieldCheck :size="24" /><span>Clear ownership</span></div></div></div><div class="story-footer">Built for the way teams work.<span>TEAMFLOW / 01</span></div></aside><main class="auth-form-area"><div class="auth-form"><span class="eyebrow">{{ register ? 'GET STARTED' : 'WELCOME BACK' }}</span><h2>{{ register ? 'Build something together.' : 'Back to your team.' }}</h2><p class="text-secondary mb-4">{{ register ? 'Create your account. Your team is next.' : 'Sign in to your TeamFlow workspace.' }}</p><form class="form-stack" @submit.prevent="submit"><template v-if="register"><label for="name">Full name</label><InputText id="name" v-model="form.name" autocomplete="name" minlength="2" maxlength="80" required :disabled="busy" /></template><label for="email">Email address</label><InputText id="email" v-model="form.email" type="email" autocomplete="email" maxlength="254" required :disabled="busy" /><label for="password">Password</label><Password inputId="password" v-model="form.password" :feedback="false" toggleMask :inputProps="{ autocomplete: register ? 'new-password' : 'current-password', required: true, minlength: register ? 8 : 1, maxlength: 128 }" :disabled="busy" /><template v-if="register"><p class="field-hint">At least 8 characters, including a letter and a number.</p><label for="confirm">Confirm password</label><Password inputId="confirm" v-model="form.confirm_password" :feedback="false" toggleMask :inputProps="{ autocomplete: 'new-password', required: true, maxlength: 128 }" :disabled="busy" /></template><div v-else class="d-flex align-items-center gap-2 my-2"><Checkbox inputId="remember" v-model="form.remember" binary :disabled="busy" /><label for="remember" class="mb-0">Remember me</label></div><p v-if="error" class="form-error" role="alert">{{ error }}</p><Button type="submit" :loading="busy" :label="busy ? register ? 'Creating account…' : 'Signing in…' : register ? 'Create account' : 'Sign in'"><template #icon><ArrowRight :size="17" /></template></Button></form><p class="auth-switch">{{ register ? 'Already part of a team?' : 'New to TeamFlow?' }} <RouterLink :to="register ? '/login' : '/register'" @click="error = ''">{{ register ? 'Sign in' : 'Create an account' }}</RouterLink></p><p class="auth-note"><ShieldCheck :size="14" /> Your workspace starts with secure access.</p></div></main></div></template>
