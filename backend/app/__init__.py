@@ -78,12 +78,19 @@ def create_app(config=None):
 
         secret = secret_path.read_text().strip()
 
+    # Database URI configuration (Supports Supabase PostgreSQL & SQLite fallback)
+    db_uri = os.getenv("DATABASE_URL") or os.getenv("SUPABASE_DATABASE_URL")
+    if db_uri:
+        if db_uri.startswith("postgres://"):
+            db_uri = db_uri.replace("postgres://", "postgresql://", 1)
+    else:
+        db_uri = "sqlite:///teamflow.db"
+
     # Application configuration
     app.config.update(
         SECRET_KEY=secret,
 
-        # Resolves to <instance_path>/teamflow.db
-        SQLALCHEMY_DATABASE_URI="sqlite:///teamflow.db",
+        SQLALCHEMY_DATABASE_URI=db_uri,
 
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",

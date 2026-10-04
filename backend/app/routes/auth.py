@@ -47,6 +47,27 @@ def login():
     login_user(user, remember=data.get('remember') is True)
     return identity()
 
+@bp.post('/supabase-login')
+def supabase_login():
+    data = payload()
+    email = email_field(data)
+    name = data.get('name')
+    if not isinstance(name, str) or len(name.strip()) < 2:
+        name = email.split('@')[0]
+    else:
+        name = name.strip()
+
+    user = db.session.scalar(db.select(User).filter_by(email=email))
+    if not user:
+        user = User(name=name, email=email)
+        user.set_password(secrets.token_urlsafe(32))
+        db.session.add(user)
+        db.session.commit()
+
+    session.clear()
+    login_user(user, remember=True)
+    return identity()
+
 @bp.get('/me')
 @login_required
 def me():

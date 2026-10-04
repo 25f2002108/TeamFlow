@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { session } from '../stores/session'
 const Auth = () => import('../views/auth/Auth.vue')
+const AuthCallback = () => import('../views/auth/AuthCallback.vue')
 const Onboarding = () => import('../views/onboarding/Onboarding.vue')
 const Shell = () => import('../layouts/Shell.vue')
 const Overview = () => import('../views/dashboard/Overview.vue')
@@ -12,6 +13,7 @@ const Activity = () => import('../views/activity/Activity.vue')
 const Workspace = () => import('../views/workspace/Workspace.vue')
 const router = createRouter({ history: createWebHistory(), routes: [
   { path: '/login', component: Auth }, { path: '/register', component: Auth },
+  { path: '/auth/callback', component: AuthCallback },
   { path: '/onboarding', component: Onboarding, meta: { protected: true } },
   { path: '/', component: Shell, meta: { protected: true, team: true }, children: [
     { path: '', name: 'Overview', component: Overview }, { path: 'team', name: 'Team', component: Team }, { path: 'settings', name: 'Settings', component: Settings }, { path: 'board', name: 'Task board', component: Board }, { path: 'my-tasks', name: 'My tasks', component: MyTasks }, { path: 'activity', name: 'Activity', component: Activity }, { path:'workspace',name:'Workspace',component:Workspace }
