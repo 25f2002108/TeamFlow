@@ -1,0 +1,16 @@
+[project]
+name = "teamflow-backend"
+version = "0.1.0"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "Flask>=3.1,<4",
+    "Flask-SQLAlchemy>=3.1,<4",
+    "Flask-Login>=0.6,<1",
+    "python-dotenv>=1,<2",
+    "pytest>=8,<10",
+    "Flask-SocketIO>=5.5,<6",
+    "simple-websocket>=1.1,<2"
+]
+
+[tool.vercel]
+entrypoint = "run:app"
