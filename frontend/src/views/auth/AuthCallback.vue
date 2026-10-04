@@ -9,6 +9,29 @@ const router = useRouter()
 const statusMessage = ref('Authenticating with Google...')
 const errorMessage = ref('')
 
+async function getSupaSession() {
+  if (!supabase) return null
+  let res = await supabase.auth.getSession()
+  if (res.data?.session?.user) return res.data.session
+  return new Promise(resolve => {
+    let done = false
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
+      if (s?.user && !done) {
+        done = true
+        subscription.unsubscribe()
+        resolve(s)
+      }
+    })
+    setTimeout(() => {
+      if (!done) {
+        done = true
+        subscription.unsubscribe()
+        resolve(null)
+      }
+    }, 3000)
+  })
+}
+
 onMounted(async () => {
   try {
     if (!supabase) {
@@ -16,23 +39,7 @@ onMounted(async () => {
       return
     }
 
-    let supaSession = (await supabase.auth.getSession()).data?.session
-
-    if (!supaSession?.user) {
-      await new Promise(resolve => {
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
-          if (s?.user) {
-            supaSession = s
-            subscription.unsubscribe()
-            resolve()
-          }
-        })
-        setTimeout(() => {
-          subscription.unsubscribe()
-          resolve()
-        }, 2500)
-      })
-    }
+    const supaSession = await getSupaSession()
 
     if (!supaSession?.user) {
       errorMessage.value = 'Failed to retrieve Google login session.'

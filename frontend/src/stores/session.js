@@ -7,6 +7,7 @@ let initialization
 let requestVersion = 0
 const activeTeam = computed(() => state.teams.find(t => t.id === state.activeId))
 function apply(data) {
+  initialization = null
   state.user = data.user
   state.teams = data.teams
   state.ready = true
@@ -21,6 +22,29 @@ function selectTeam(id) {
   state.members = []
   requestVersion++
 }
+async function getSupaSession() {
+  if (!supabase) return null
+  let res = await supabase.auth.getSession()
+  if (res.data?.session?.user) return res.data.session
+  return new Promise(resolve => {
+    let done = false
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
+      if (s?.user && !done) {
+        done = true
+        subscription.unsubscribe()
+        resolve(s)
+      }
+    })
+    setTimeout(() => {
+      if (!done) {
+        done = true
+        subscription.unsubscribe()
+        resolve(null)
+      }
+    }, 2500)
+  })
+}
+
 async function restore() {
   state.error = ''
   try {
@@ -30,15 +54,7 @@ async function restore() {
       let synced = false
       if (supabase) {
         try {
-          let supaSession = (await supabase.auth.getSession()).data?.session
-          if (!supaSession?.user && (window.location.hash.includes('access_token=') || window.location.hash.includes('type='))) {
-            await new Promise(resolve => {
-              const { data: { subscription } } = supabase.auth.onAuthStateChange((event, s) => {
-                if (s?.user) { supaSession = s; subscription.unsubscribe(); resolve() }
-              })
-              setTimeout(() => { subscription.unsubscribe(); resolve() }, 2000)
-            })
-          }
+          const supaSession = await getSupaSession()
           if (supaSession?.user) {
             const email = supaSession.user.email
             const name = supaSession.user.user_metadata?.full_name || supaSession.user.user_metadata?.name || email.split('@')[0]
@@ -60,7 +76,7 @@ async function restore() {
 }
 function init() { return initialization ||= restore() }
 async function refresh() { apply((await api.get('/auth/me')).data) }
-function clear() { state.user = null; state.teams = []; selectTeam(null) }
+function clear() { initialization = null; state.user = null; state.teams = []; selectTeam(null) }
 async function logout() { await api.post('/auth/logout'); clear() }
 async function loadTeam() {
   const id = state.activeId
